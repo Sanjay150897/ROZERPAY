@@ -35,7 +35,7 @@ if ($count == 0) {
     <div class="container">
         <div class="row py-2">
             <div class="col-sm-12 form-container">
-                <h1><span style="color:blue;font-weight:bolder;"> C H E<span style="color:red;font-weight:bolder;"> C K O</span><span style="color:blueviolet;font-weight:bolder;"> U T</span></h1>
+                <h1><span style="color:blue;font-weight:bolder;"> C H E<span style="color:red;font-weight:bolder;"> C K O</span><span style="color:green;font-weight:bolder;"> U T</span></h1>
                 <hr>
                 <?php
                 if (isset($_POST['submit_form'])) {

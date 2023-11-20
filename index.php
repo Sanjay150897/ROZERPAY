@@ -26,6 +26,10 @@ require_once("config.php");
     color: black;
     font-weight: bolder;
 }
+ul,a{
+    list-style-type: none;
+    color: black;
+}
     </style>
 </head>
 

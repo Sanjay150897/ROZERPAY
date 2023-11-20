@@ -1,4 +1,4 @@
-# RAZORPAY
+# RAZORPAY PAYMENT GATEWAY
  Project Title - Razorpay Payment Gateway Integration.
  </br>
  Author - Sanjay Patel?</br>

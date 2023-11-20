@@ -45,7 +45,7 @@ if ($count == 0) {
                     $_SESSION['email'] = $_POST['email'];
                     $_SESSION['mobile'] = $_POST['mobile'];
                     $_SESSION['address'] = $_POST['address'];
-                    $_SESSION['notr'] = $_POST['note'];
+                    $_SESSION['note'] = $_POST['note'];
                     $_SESSION['pid'] = $pid;
 
                     if ($_POST['email'] != '') {

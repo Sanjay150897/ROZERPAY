@@ -1,4 +1,5 @@
 # RAZORPAY
  Project Title - Razorpay Payment Gateway Integration.
- Author - Sanjay Patel
- It is a small razorpay payment gateway integration project select a product and pay through Razorpay Payment gateway.
+ </br>
+ Author - Sanjay Patel?</br>
+ It is a small Razorpay payment gateway integration project select a product and pay through the Razorpay Payment gateway.

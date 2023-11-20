@@ -19,10 +19,24 @@ require_once("config.php");
     <!--CSS file -->
 
     <link rel="stylesheet" href="style.css">
+
+    <style>
+.navbar{
+    background-color: aqua;
+    color: black;
+    font-weight: bolder;
+}
+    </style>
 </head>
 
 <body>
     <div class="container">
+        <nav class="navbar justify-content-center d-flex">
+            <ul id="menu"><a href="index.php">Home</a></ul>
+            <ul id="menu"><a href="create_product.php">Create Product</a></ul>
+            <ul id="menu"><a href="products.php">Products List</a></ul>
+            <ul id="menu"><a href="payments.php">Payment Details</a></ul>
+        </nav>
         <div class="row">
             <?php
             $sql = "select * from products order by pid desc";

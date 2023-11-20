@@ -2,12 +2,8 @@
 require('razorpay-php/Razorpay.php');
 require_once("config.php");
 
-if (!isset($_SESSION['email'])) {
-    header("location:index.php");
-    exit();
-} else {
-    $pid = $_SESSION['pid'];
-}
+$pid = $_SESSION['pid'];
+
 ?>
 
 .
@@ -18,7 +14,7 @@ if (!isset($_SESSION['email'])) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Pay</title>
+    <title>Payment Verify</title>
     <link rel="stylesheet" href="">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
@@ -33,142 +29,174 @@ if (!isset($_SESSION['email'])) {
         <div class="row py-2">
             <div class="col-sm-12 form-container">
                 <h1><span style="color:blue;font-weight:bolder;"> P A Y<span style="color:red;font-weight:bolder;"> M </span><span style="color:blueviolet;font-weight:bolder;">E N T</span></h1>
+                
                 <hr>
-                <?php
-                include("gateway-config.php");
 
-                use Razorpay\Api\Api;
-
-                $api = new Api($keyId, $keySecret);
-
-                $firstname = $_SESSION['fname'];
-                $lastname = $_SESSION['lname'];
-                $email = $_SESSION['email'];
-                $mobile = $_SESSION['mobile'];
-                $address = $_SESSION['address'];
-                $note = $_SESSION['note'];
-
-                $sql = "select * from products where pid = :pid";
-                $stmt = $db->prepare($sql);
-                $stmt->bindParam(':pid', $pid, PDO::PARAM_INT);
-                $stmt->execute();
-                $row = $stmt->fetch();
-
-                $price = $row['price'];
-                $_SESSION['price'] = $price;
-                $title = $row['title'];
-                $webtitle = "spatel : Razorpay payment Gateway";  // Change web Title
-                $displayCurrency = "INR";
-                $imageurl = "assets/uploads/ad.jpg";  //change logo from here
-
-                $orderData = [
-                    'receipt'         => $pid,
-                    'amount'          => $price * 100, // 2000 rupees in paise
-                    'currency'        => 'INR',
-                    'payment_capture' => 1 // auto capture
-                ];
-
-                $razorpayOrder = $api->order->create($orderData);
-
-                $razorpayOrderId = $razorpayOrder['id'];
-
-                $_SESSION['razorpay_order_id'] = $razorpayOrderId;
-
-                $displayAmount = $amount = $orderData['amount'];
-
-                if ($displayCurrency !== 'INR') {
-                    $url = "https://api.fixer.io/latest?symbols=$displayCurrency&base=INR";
-                    $exchange = json_decode(file_get_contents($url), true);
-
-                    $displayAmount = $exchange['rates'][$displayCurrency] * $amount / 100;
-                }
-
-                $data = [
-                    "key"               => $keyId,
-                    "amount"            => $amount,
-                    "name"              => $webtitle,
-                    "description"       => $title,
-                    "image"             => $imageurl,
-                    "prefill"           => [
-                        "name"              => $firstname . ' ' . $lastname,
-                        "email"             => $email,
-                        "contact"           => $mobile,
-                    ],
-                    "notes"             => [
-                        "address"           => $address,
-                        "merchant_order_id" => "12312321",
-                    ],
-                    "theme"             => [
-                        "color"             => "#F37254"
-                    ],
-                    "order_id"          => $razorpayOrderId,
-                ];
-
-                if ($displayCurrency !== 'INR') {
-                    $data['display_currency']  = $displayCurrency;
-                    $data['display_amount']    = $displayAmount;
-                }
-
-                $json = json_encode($data);
-                ?>
                 <div class="card px-4 py-1">
                     <div class="row pb-4">
-                        <div class="col-8">
-                            <h4> (Pay Details) </h4>
-                            <div class="pt-4">
-                            </div>
-                            <div class="mb-3">
-                                <label class="label">First Name</label>
-                                <?php echo $firstname; ?>
-                            </div>
-                            <div class="mb-3">
-                                <label class="label">Last Name</label>
-                                <?php echo $lastname; ?>
-                            </div>
-                            <div class="mb-3">
-                                <label class="label">Email</label>
-                                <?php echo $email; ?>
-                            </div>
-                            <div class="mb-3">
-                                <label class="label">Mobile Number</label>
-                                <?php echo $mobile; ?>
-                            </div>
-                            <div class="mb-3">
-                                <label class="label">Address</label>
-                                <?php echo $address; ?>
-                            </div>
-                            <div class="mb-3">
-                                <label class="label">Note</label>
-                                <?php echo $note; ?>
-                            </div>
+                        <div class="col-8">                            
+                            <h4>Payment status</h4>                            
+                            <?php
+
+                            include("gateway-config.php");
+
+                            use Razorpay\Api\Api;
+                            use Razorpay\Api\Errors\SignatureVerificationError;
+
+                            $success = true;
+
+                            $error = "Payment Failed";
+
+                            if (empty($_POST['razorpay_payment_id']) === false) {
+                                $api = new Api($keyId, $keySecret);
+
+                                try {
+                                    // Please note that the razorpay order ID must
+                                    // come from a trusted source (session here, but
+                                    // could be database or something else)
+                                    $attributes = array(
+                                        'razorpay_order_id' => $_SESSION['razorpay_order_id'],
+                                        'razorpay_payment_id' => $_POST['razorpay_payment_id'],
+                                        'razorpay_signature' => $_POST['razorpay_signature']
+                                    );
+
+                                    $api->utility->verifyPaymentSignature($attributes);
+                                } catch (SignatureVerificationError $e) {
+                                    $success = false;
+                                    $error = 'Razorpay Error : ' . $e->getMessage();
+                                }
+                            }
+
+                            if ($success === true) {
+
+                                $firstname = $_SESSION['fname'];
+                                $lastname = $_SESSION['lname'];
+                                $email = $_SESSION['email'];
+                                $mobile = $_SESSION['mobile'];
+                                $address = $_SESSION['address'];
+                                $note = $_SESSION['note'];
+
+                                $posted_hash = $_SESSION['razorpay_order_id'];
+
+                                if (isset($_POST['razorpay_payment_id'])) {
+
+                                    $txnid = $_POST['razorpay_payment_id'];
+                                    $amount = $_SESSION['price'];
+                                    $status = "success";
+                                    $eid = $_POST['shopping_order_id'];
+                                    $subject = "Your payment has benn successfull...";
+                                    $key_value = 'okpmt';
+                                    $currency = "INR";
+                                    $date = new DateTime(null, new DateTimezone("Asia/kolkata"));
+                                    $payment_date = $date->format("d-m-Y H:i:s");
+
+                                    $sql = "select count(*) from payments where txnid=:txnid";
+                                    $stmt = $db->prepare($sql);
+                                    $stmt->bindParam(':txnid', $txnid, PDO::PARAM_STR);
+                                    $stmt->execute();
+                                    $counts = $stmt->fetchColumn();
+
+                                    if ($txnid != '') {
+                                        if ($counts <= 0) {
+                                            $sql = "insert into payments(firstname,lastname,amount,status,txnid,pid,payer_email,
+                                            currency,mobile,address,note,payment_date) values(:firstname,:lastname,:amount,:status,:txnid,
+                                            :pid,:payer_email,:currency,:mobile,:address,:note,:payment_date)";
+                                            $stmt = $db->prepare($sql);
+                                            $stmt->bindParam(':firstname', $firstname, PDO::PARAM_STR);
+                                            $stmt->bindParam(':lastname', $lastname, PDO::PARAM_STR);
+                                            $stmt->bindParam(':amount', $amount, PDO::PARAM_STR);
+                                            $stmt->bindParam(':status', $status, PDO::PARAM_STR);
+                                            $stmt->bindParam(':txnid', $txnid, PDO::PARAM_STR);
+                                            $stmt->bindParam(':pid', $pid, PDO::PARAM_INT);
+                                            $stmt->bindParam(':payer_email', $email, PDO::PARAM_STR);
+                                            $stmt->bindParam(':currency', $currency, PDO::PARAM_STR);
+                                            $stmt->bindParam(':mobile', $mobile, PDO::PARAM_STR);
+                                            $stmt->bindParam(':address', $address, PDO::PARAM_STR);
+                                            $stmt->bindParam(':note', $note, PDO::PARAM_STR);
+                                            $stmt->bindParam(':payment_date', $payment_date, PDO::PARAM_STR);
+                                            $stmt->execute();
+                                        }
+                                        // start 
+                                        echo ' <h2 style="color:#33FF00";>' . $subject . '</h2>   <hr>';
+
+                                        echo '<table class="table">';
+                                        echo '<tr> ';
+                                        $rows = $sql = "SELECT * from payments WHERE txnid=:txnid";
+                                        $stmt = $db->prepare($sql);
+                                        $stmt->bindParam(':txnid', $txnid, PDO::PARAM_STR);
+                                        $stmt->execute();
+                                        $rows = $stmt->fetchAll();
+                                        foreach ($rows as $row) {
+                                            $dbdate = $row['payment_date'];
+                                        }
+                                        echo '<tr>  
+                                      <th>Transaction ID:</th>
+                                    <td>' . $txnid . '</td> 
+                                </tr>
+                                 <tr> 
+                                    <th>Paid Amount:</th>
+                                    <td>' . $amount . ' ' . $currency . '</td> 
+                                </tr>
+                                <tr>
+                                   <th>Payment Status:</th>
+                                    <td>' . $status . '</td> 
+                               </tr>
+                               <tr> 
+                                   <th>Payer Email:</th>
+                                   <td>' . $email . '</td> 
+                               </tr>
+                                <tr> 
+                                   <th>Name:</th>
+                                   <td>' . $firstname . ' ' . $lastname . '</td>
+                               </tr>
+                               <tr> 
+                                   <th>Address:</th>
+                                   <td>' . $address . '</td>
+                               </tr>
+                               <tr> 
+                                   <th>Note:</th>
+                                   <td>' . $note . '</td>
+                               </tr>
+                            
+                               <tr>
+                                   <th>Date :</th>
+                                   <td>' . $dbdate . '</td> 
+                              </tr>
+                              </table>';
+                                    } else {
+                                        $html = "<p><div class='errmsg'>Invalid Transaction. Please Try Again</div></p>";
+                                        $error_found = 1;
+                                    }
+                                }
+                            } else {
+                                $html = "<p><div class='errmsg'>Invalid Transaction. Please Try Again</div></p>
+                                  <p>{$error}</p>";
+                                $error_found = 1;
+                            }
+                            if (isset($html)) {
+                                echo $html;
+                            }
+                            ?>
                         </div>
                         <div class="col-sm-4 text-center pt-5">
-                            <?php
-                            $sql = "select * from products where pid=:pid";
+                        <?php
+                        if (!isset($error_found)) {
+                            $sql = "SELECT * from products WHERE pid=:pid";
                             $stmt = $db->prepare($sql);
                             $stmt->bindParam(':pid', $pid, PDO::PARAM_INT);
                             $stmt->execute();
                             $row = $stmt->fetch();
                             echo '<div class="card" style="width: 18rem;">
-                    <img src="uploads/' . $row['image'] . '" class="card-img-top my-2" alt="Product Image" width="300px" height="200px">
-                    <div class="card-body">
-                        <h5 class="card-title">' . $row['title'] . '</h5>
-                        <p class="card-text">' . $row['price'] . ' INR</p>                        
-                    </div>
-            </div>';
-
-                            ?>
-                            <div class="pt-3">
-                                <center>
-                                    <form action="verify.php" method="POST">
-                                        <script src="https://checkout.razorpay.com/v1/checkout.js" data-key="<?php echo $data['key'] ?>" data-amount="<?php echo $data['amount'] ?>" data-currency="INR" data-name="<?php echo $data['name'] ?>" data-image="<?php echo $data['image'] ?>" data-description="<?php echo $data['description'] ?>" data-prefill.name="<?php echo $data['prefill']['name'] ?>" data-prefill.email="<?php echo $data['prefill']['email'] ?>" data-prefill.contact="<?php echo $data['prefill']['contact'] ?>" data-notes.shopping_order_id="3456" data-order_id="<?php echo $data['order_id'] ?>" <?php if ($displayCurrency !== 'INR') { ?> data-display_amount="<?php echo $data['display_amount'] ?>" <?php } ?> <?php if ($displayCurrency !== 'INR') { ?> data-display_currency="<?php echo $data['display_currency'] ?>" <?php } ?>>
-                                        </script>
-                                        <!-- Any extra fields to be submitted with the form but not sent to Razorpay -->
-                                        <input type="hidden" name="shopping_order_id" value="<?php echo $pid; ?>">
-                                    </form>
-                                </center>
-
-                            </div>
+                                <img class="card-img-top" src="uploads/' . $row['image'] . '" alt="Card image cap">
+                                <div class="card-body">
+                                  <h5 class="card-title">' . $row['title'] . '</h5>
+                                  <p class="card-title">' . $row['price'] . ' INR</p>
+                                </div>
+                              </div>';
+                        }
+                        ?>
+                        <br>
+                            <a href="index.php" class="btn btn-warning text-right">Go To Home</a>
                         </div>
                     </div>
                 </div>
